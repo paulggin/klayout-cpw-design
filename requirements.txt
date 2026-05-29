@@ -1,0 +1,12 @@
+numpy>=1.24
+scipy>=1.10
+matplotlib>=3.7
+
+# KLayout: install separately from https://www.klayout.de/build.html
+# The pya Python API ships inside the KLayout binary; experiments/cpw_*.py
+# scripts run from KLayout's built-in macro editor (Tools -> Macro Development),
+# not from a system Python.
+
+# OpenEMS: install separately from https://docs.openems.de/install.html
+# The Python bindings (CSXCAD, openEMS) require the openEMS engine binary
+# to be on PATH. pip install openems CSXCAD after the engine is installed.
