@@ -138,7 +138,7 @@ The FDTD result sits within 0.1% of the Wen analytical, which is well inside the
 
 ---
 
-## Repo inventory
+## Repository layout
 
 ```
 .
@@ -166,46 +166,23 @@ The FDTD result sits within 0.1% of the Wen analytical, which is well inside the
 
 ---
 
-## How to replicate
-
-Two installations are needed outside the standard Python stack: KLayout for the layout scripts and OpenEMS for the FDTD verification. Both are free.
-
-**Install dependencies:**
+## How to reproduce
 
 ```bash
+# 1. Install
 pip install -r requirements.txt
-# KLayout: download from https://www.klayout.de/build.html
-# OpenEMS + CSXCAD: install per https://docs.openems.de/install.html
+# KLayout:           https://www.klayout.de/build.html
+# OpenEMS + CSXCAD:  https://docs.openems.de/install.html
+
+# 2. Sweep the design space (~1 sec)
+python experiments/cpw_impedance_sweep.py
+
+# 3. Build the GDS layouts (load each in KLayout's macro editor, F5)
+#    experiments/cpw_cross_section.py
+#    experiments/cpw_full_layout.py
+
+# 4. FDTD verification (~20 min on 16 threads)
+python experiments/cpw_em_openems.py
 ```
 
-**Run order:**
-
-1. **Impedance sweep** — standard Python, ~1 second:
-
-   ```bash
-   python experiments/cpw_impedance_sweep.py
-   ```
-   Writes `plots/cpw_impedance_sweep.png`.
-
-2. **Cross-section geometry** — KLayout macro editor:
-
-   Open KLayout → Tools → Macro Development → load `experiments/cpw_cross_section.py` → F5.
-   Writes `layouts/cpw_cross_section.gds`.
-
-3. **Full chip layout** — same KLayout flow, ~5 seconds:
-
-   Load `experiments/cpw_full_layout.py` → F5.
-   Writes `layouts/cpw_full_layout.gds`.
-
-4. **FDTD verification** — standard Python, ~20 min on a 16-thread laptop:
-
-   ```bash
-   python experiments/cpw_em_openems.py
-   ```
-   Writes `plots/cpw_em_simulation.png` and a `.npz` of raw S-parameter data. The script puts its FDTD scratch directory in the OS temp folder (so OneDrive sync does not lock files mid-run) and configures all hardware threads via the `numThreads` keyword to `FDTD.Run` (the `OMP_NUM_THREADS` env var is unreliable on Windows openEMS builds). The printed summary block at the end reports simulated Z₀, discrepancy against Wen, and both line-referenced and port-referenced |S₁₁|.
-
 ---
-
-## License
-
-MIT — see [LICENSE](LICENSE).
