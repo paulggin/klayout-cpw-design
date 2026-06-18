@@ -1,22 +1,3 @@
-"""
-cpw_full_layout.py
-Project 3 — Full Chip Layout Build
----------------------------------------------
-Assembles a complete CPW chip layout with four elements:
-  1. Straight feedline (3400 um)
-  2. Tapered launchers (2x, 200 um bond pad -> 10 um CPW)
-  3. Meander resonator (4 x 1000 um segments, 3 bends)
-  4. Gap coupling capacitor (5 um gap)
-
-Design: 50 Ohm CPW on silicon (epsilon_r = 11.7)
-  s = 10 um, w = 6 um, Z0 = 50.43 Ohm (Wen 1969)
-  epsilon_eff = 6.35, v_phase = 0.397 x c
-
-Run from: KLayout macro editor (Tools -> Macros -> Macro Development)
-Language: Python
-Requires: pya (bundled with KLayout)
-"""
-
 import pya
 import os
 
@@ -66,11 +47,6 @@ CHIP_H = um(3000)    # 3 mm chip height
 # ═══════════════════════════════════════════════════════════════════════════════
 
 def draw_cpw_segment(cell, x0, x1, y_center):
-    """
-    Draw a horizontal CPW segment from x0 to x1, centered on y_center.
-    Draws: center conductor, top+bottom gaps, top+bottom ground planes.
-    All on the locked s/w design (10/6 um, Z0=50.43 Ohm).
-    """
     yc = y_center
     cell.shapes(LY_METAL).insert(pya.Box(x0, yc - HALF_S,    x1, yc + HALF_S))
     cell.shapes(LY_GAP).insert(  pya.Box(x0, yc + GAP_INNER, x1, yc + GAP_OUTER))
@@ -80,22 +56,6 @@ def draw_cpw_segment(cell, x0, x1, y_center):
 
 
 def draw_launcher(cell, x_tip, y_center, facing):
-    """
-    Draw a tapered CPW launcher (impedance transition from bond pad to CPW).
-
-    Parameters
-    ----------
-    x_tip   : x coordinate of the CPW end of the taper (where CPW begins)
-    y_center: y centerline
-    facing  : +1 = pad extends LEFT of x_tip (left-side launcher)
-              -1 = pad extends RIGHT of x_tip (right-side launcher)
-
-    Geometry
-    --------
-    Bond pad: 200 um wide, 300 um long
-    Taper:    400 um long, linearly widens from CPW to pad dimensions
-    Pad gap:  80 um (wider than CPW gap for probe landing area)
-    """
     PAD_W       = um(200)
     PAD_LEN     = um(300)
     TAPER_LEN   = um(400)
@@ -161,25 +121,6 @@ def draw_launcher(cell, x_tip, y_center, facing):
 
 
 def draw_meander(cell, x_start, y_center, seg_len, n_bends):
-    """
-    Draw a meandered CPW resonator.
-
-    Parameters
-    ----------
-    x_start  : x coordinate of the first segment start
-    y_center : y centerline of the first segment
-    seg_len  : length of each horizontal segment (dbu)
-    n_bends  : number of U-turns; produces (n_bends+1) horizontal segments
-
-    Each U-turn shifts the centerline up by PITCH.
-    Returns (x_end, y_end) of the final segment tip.
-
-    Notes
-    -----
-    Bend blocks are solid metal fills bridging adjacent lanes.
-    Gap cutouts maintain the correct CPW gap profile through the bend.
-    Bend discontinuities require EM verification (see the FDTD verification step).
-    """
     PITCH  = 2 * GND_OUTER + um(80)   # lane-to-lane pitch (80 um clearance)
     BEND_W = GND_OUTER                 # U-turn block half-width
 
@@ -228,20 +169,6 @@ def draw_meander(cell, x_start, y_center, seg_len, n_bends):
 
 
 def draw_coupling_cap(cell, x_pos, y_center):
-    """
-    Draw a gap coupling capacitor: a break in the center conductor only.
-
-    Parameters
-    ----------
-    x_pos    : x position of the gap center
-    y_center : y centerline
-
-    Notes
-    -----
-    CAP_GAP = 5 um. Smaller gaps give larger capacitance and stronger coupling.
-    This is the simplest CPW coupling element. More complex designs use
-    interdigitated fingers for larger capacitance in smaller footprint.
-    """
     CAP_GAP = um(5)
     cell.shapes(LY_GAP).insert(
         pya.Box(x_pos - CAP_GAP // 2, y_center - HALF_S,
@@ -295,7 +222,7 @@ X_CAP = X_FEED_START + (X_FEED_END - X_FEED_START) * 3 // 4
 draw_coupling_cap(top, X_CAP, Y_FEED)
 
 # ── Write GDS ─────────────────────────────────────────────────────────────────
-output_dir = r'C:\Users\Paul\OneDrive\Documents\Cowork Brainstem\Quantum Job Search\Portfolio\KLayout_CPW_Design\outputs\gds'
+output_dir = r'C:\Users\Paul\OneDrive\Desktop\Portfolio Projects\CPW - KLayout\outputs\gds'
 os.makedirs(output_dir, exist_ok=True)
 output_file = os.path.join(output_dir, 'cpw_full_layout.gds')
 layout.write(output_file)
