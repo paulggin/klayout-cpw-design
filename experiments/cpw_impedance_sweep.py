@@ -8,11 +8,6 @@ epsilon_eff = (1 + epsilon_r) / 2   # equal filling fraction approximation
 
 # ── CPW Impedance (Wen 1969) ─────────────────────────────────────────────────
 def cpw_impedance(s_um, w_um):
-    """
-    Returns Z0 in ohms for a CPW with center conductor width s (µm)
-    and gap width w (µm) on a substrate with epsilon_eff.
-    Uses the Wen (1969) formula via complete elliptic integrals.
-    """
     s = s_um * 1e-6   # convert to metres (cancels out, but keeps units explicit)
     w = w_um * 1e-6
 
@@ -69,7 +64,7 @@ ax.set_title(f'CPW Characteristic Impedance — Silicon (ε_r = {epsilon_r})\nWe
 ax.legend(fontsize=11)
 plt.tight_layout()
 
-# Save — hardcoded absolute path for Windows
-plt.savefig(r'C:\Users\Paul\OneDrive\Documents\Cowork Brainstem\Quantum Job Search\Portfolio\KLayout_CPW_Design\outputs\plots\cpw_impedance_sweep.png', dpi=150, bbox_inches='tight')
+# Save 
+plt.savefig(r'C:\Users\Paul\OneDrive\Desktop\Portfolio Projects\CPW - KLayout\outputs\plots', dpi=150, bbox_inches='tight')
 print("\nPlot saved.")
 plt.show()
