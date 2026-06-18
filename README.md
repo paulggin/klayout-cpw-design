@@ -136,6 +136,18 @@ The FDTD result sits within 0.1% of the Wen analytical, which is well inside the
 
 ---
 
+### Discussion
+
+**Impedance depends on a ratio, not absolute size.** The Wen formula collapses every (s, w) combination on the same 50 Ω contour to the single dimensionless number k = s / (s + 2w) = 0.4545. The choice of s = 10 µm, w = 6 µm out of the entire contour is therefore not a physics choice but a fabrication-and-resonator-size tradeoff. The s/w ratio of 1.67 sits in the practical 1.5–3.0 range where the mode is well-confined and the chip is forgiving to ±2 µm lithographic variation; both dimensions exceed the optical-litho minimum of 3–5 µm by a comfortable margin. Pushing to smaller geometries would buy a more compact resonator but cost both fabrication margin and the wall-thickness budget that keeps the meander corners from rounding into significant impedance discontinuities.
+
+**The 0.07% agreement is bounded by Wen's approximations.** The Wen (1969) formula assumes infinite ground planes, zero-thickness metal, and a lossless silicon substrate; the OpenEMS simulation uses 200 µm finite ground planes, 2 µm metal, and a real dielectric. Any number tighter than ~0.5 % is therefore comparing the FDTD to a formula that has already truncated reality. Hitting 0.07 % from a coarse mesh on a CFL-friendly metal thickness means the simulation is doing the right thing on the regime where the formula is exact, and the result transfers cleanly: the same setup with realistic 200 nm Nb film and a finite cryostat ground plane would shift Z₀ by maybe a percent through metal-thickness contraction, well below the lithographic process variation built into the design point.
+
+**Port impedance setup, not mesh, determines the result.** The raw openEMS port |S₁₁| of −9.6 dB looks alarming until traced back to the underlying port-network identity: each lumped port has R = 100 Ω, and even a perfectly matched 50 Ω transmission line reflects exactly that level at the individual port. Three FDTD iterations were needed to land at the right answer. A single-gap excitation drove an asymmetric coplanar-strip mode and gave Z = 31 Ω; flipping to a dual-gap port with both excitations in phase drove the ground-vs-ground differential mode and gave Z = 6.85 Ω; the symmetric CPW mode required a sign-corrected dual-gap port plus a post-processing reference-impedance fix. The lesson generalizes to any FDTD CPW work: port impedance handling matters at least as much as the mesh, and the standalone recompute_z_from_npz.py post-processor is the right tool to rerun Z extraction without re-running the FDTD when port handling changes.
+
+**The 14.9 GHz resonator length is a demonstration choice.** A half-wave resonance at the target 5–8 GHz qubit band requires roughly 10–15 mm of total meander length. The demo geometry uses 4 mm because that fits cleanly inside the 5 × 3 mm chip footprint and keeps the layout image readable; the impedance physics being demonstrated is independent of the resonator length. Moving to a band-correct resonator is a mechanical change (more meander segments at the same s/w cross-section) that does not affect the analytical-vs-FDTD comparison the project is built around.
+
+---
+
 ## Repository layout
 
 ```
