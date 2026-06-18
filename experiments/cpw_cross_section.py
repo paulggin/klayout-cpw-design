@@ -1,16 +1,3 @@
-"""
-cpw_cross_section.py
-Project 3 — CPW Cross-Section Geometry Verification
---------------------------------------------------------------
-Draws a single 1 mm CPW segment in KLayout with the locked design
-parameters (s=10um, w=6um, Z0=50.43 Ohm on silicon).
-Verifies all dimensional targets in the console output.
-
-Run from: KLayout macro editor (Tools -> Macros -> Macro Development)
-Language: Python
-Requires: pya (bundled with KLayout)
-"""
-
 import pya
 import os
 
@@ -95,7 +82,7 @@ print(f"  Total chip width : {2*gnd_outer/1000:.1f} um")
 print()
 
 # ── Write GDS ─────────────────────────────────────────────────────────────────
-output_dir = r'C:\Users\Paul\OneDrive\Documents\Cowork Brainstem\Quantum Job Search\Portfolio\KLayout_CPW_Design\outputs\gds'
+output_dir = r'C:\Users\Paul\OneDrive\Desktop\Portfolio Projects\CPW - KLayout\outputs\gds'
 os.makedirs(output_dir, exist_ok=True)
 output_file = os.path.join(output_dir, 'cpw_cross_section.gds')
 layout.write(output_file)
