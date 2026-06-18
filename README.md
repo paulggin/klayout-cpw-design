@@ -8,9 +8,9 @@
 
 ## Overview
 
-This project designs a 50 Ω coplanar waveguide (CPW) chip in KLayout then verifies the impedance with a 3D electromagnetic simulation in OpenEMS. The deliverable is a GDS layout plus an independent EM check of the analytical impedance prediction.
+This project designs a 50 Ω coplanar waveguide (CPW) chip in KLayout then verifies the impedance with a 3D electromagnetic simulation in OpenEMS. The deliverable is a GDS layout plus an independent EM check of the impedance prediction.
 
-The project moves through four steps:
+The project consists of four steps:
 
 1. Derive the CPW characteristic impedance from the Wen (1969) elliptic-integral formula, sweep the design space on silicon, and determine the (s, w) geometry that gives Z₀ = 50 Ω.
 2. Set up the KLayout Python API and convert the finalized cross-sectional design into a GDS layer stack.
@@ -21,9 +21,9 @@ The project moves through four steps:
 
 ## Background
 
-**A CPW is three parallel strips of metal on a dielectric substrate.** A center conductor of width `s` carries the signal; two semi-infinite ground planes border it, separated from the center by gaps of width `w`. The microwave mode propagates between the center conductor and the ground planes, with most of the field concentrated in the gaps and the substrate immediately below.
+**A CPW is three parallel strips of metal on a dielectric substrate.** A center conductor of width `s` carries the signal; two semi-infinite ground planes border it, separated from the center by gaps of width `w`. The microwave propagates between the center conductor and the ground planes, with most of the field concentrated in the gaps and the substrate immediately below.
 
-The characteristic impedance was derived analytically by C. P. Wen in 1969 using conformal mapping:
+The impedance was derived analytically by C. P. Wen in 1969 using conformal mapping:
 
 ```
 Z₀ = (30π / sqrt(ε_eff)) · K(k') / K(k)
@@ -41,7 +41,7 @@ where `k = s / (s + 2w)`, `k' = sqrt(1 - k²)`, and `K(·)` is the complete elli
 
 ### Code architecture
 
-Each step is a single Python file in `experiments/`. The KLayout scripts (`cpw_impedance_sweep.py`, `cpw_cross_section.py`, `cpw_full_layout.py`) run from KLayout's built-in macro editor and write GDS to `layouts/`. The OpenEMS script (`cpw_em_openems.py`) runs from a standard Python interpreter and writes its plot to `plots/`. All four scripts share the same locked design parameters: `s = 10 µm`, `w = 6 µm`, silicon substrate with `ε_r = 11.7`.
+Each step is a Python file in `experiments/`. The KLayout scripts (`cpw_impedance_sweep.py`, `cpw_cross_section.py`, `cpw_full_layout.py`) run from KLayout's macro editor and write GDS to `layouts/`. The OpenEMS script (`cpw_em_openems.py`) runs from a standard Python interpreter and writes its plot to `plots/`. All four scripts share the same locked design parameters: `s = 10 µm`, `w = 6 µm`, silicon substrate with `ε_r = 11.7`.
 
 ### Impedance physics and parameter sweep (`cpw_impedance_sweep.py`)
 
@@ -75,7 +75,7 @@ Total chip width is 422 µm. The layer convention is L1 = metal (conductor + gro
 
 ### Full chip layout (`cpw_full_layout.py`)
 
-The complete chip layout is composed from four modular drawing functions, each generating one geometrical element. This mirrors professional device-design practice where individual cell generators are composed into chip-level assemblies:
+The complete chip layout is composed from four modular drawing functions, each generating one geometrical element. 
 
 ```
 draw_cpw_segment(cell, x0, x1, y_center)
@@ -84,9 +84,9 @@ draw_meander(cell, x_start, y_center, seg_len, n_bends)
 draw_coupling_cap(cell, x_pos, y_center)
 ```
 
-The final GDS file (`layouts/cpw_full_layout.gds`) places four elements on a 5 × 3 mm footprint:
+The final GDS file (`layouts/cpw_full_layout.gds`) places the four elements on a 5 × 3 mm footprint:
 
-| Element | Dimensions | Purpose |
+| Element | Dimensions | Function |
 | :-- | :-- | :-- |
 | Straight feedline | 3400 µm length | Primary CPW transmission line across chip center |
 | Launchers (×2) | 200 µm bond pad, 400 µm taper | CPW-to-probe / wire-bond impedance transition |
@@ -97,11 +97,9 @@ The final GDS file (`layouts/cpw_full_layout.gds`) places four elements on a 5 �
 
 ### FDTD verification with OpenEMS (`cpw_em_openems.py`)
 
-**Why OpenEMS, not Sonnet Lite.** The free Sonnet Lite distribution does not support GDS import, which would require redrawing the chip rectangle-by-rectangle in the GUI. OpenEMS is free, open-source, Python-scriptable, and accepts geometry built directly from the KLayout coordinates.
-
 **Geometry.** A 1 mm straight CPW segment with the locked (s, w) parameters, on a 200 µm silicon substrate with 200 µm of air above, all bounded by 8-cell uniaxial PML on every face. Metal thickness in the simulation is 2 µm; the real chip uses ~200 nm Nb film, but the EM-relevant geometry is the s/w ratio, and 2 µm raises the FDTD timestep ~10× through a relaxed CFL limit with negligible impact on Z₀ (<2%).
 
-**Port model.** A lumped 50 Ω port spans the upper CPW gap at each end of the segment (between the center-conductor edge and the inner edge of the upper ground plane). This excites a slightly asymmetric mode at the source plane but settles into the symmetric CPW mode within a few hundred microns of propagation, well inside the 1 mm segment. For a tighter broadband Z₀ extraction, the next step is a two-line TRL de-embedding scheme.
+**Port model.** A lumped 50 Ω port spans the upper CPW gap at each end of the segment (between the center-conductor edge and the inner edge of the upper ground plane). This excites a slightly asymmetric mode at the source plane but settles into the symmetric CPW mode within a few hundred microns of propagation, well inside the 1 mm segment. For a tighter broadband Z₀ extraction, the fix is a two-line TRL de-embedding scheme, which removes the port discontinuity by calibrating out the transition region mathematically, leaving only the transmission characteristics of the CPW line itself.
 
 **Mesh.** Anchor lines at every geometry transition in x, y, and z; `SmoothMeshLines` fills the intermediate space with a smooth grading. Maximum y step 2.5 µm with 1.5× growth ratio; maximum z step 4 µm with 1.4× growth; x mesh is 30 cells across the 1.2 mm span (PML included). No mesh lines inside the metal — PEC interior has zero field, so resolving it only shrinks the CFL timestep without adding accuracy.
 
@@ -134,7 +132,7 @@ The 50 Ω contour runs diagonally from approximately (s = 5 µm, w = 3 µm) to (
 
 ![CPW Z₀ and S-parameters vs frequency](plots/cpw_em_simulation.png)
 
-The FDTD result sits within 0.1% of the Wen analytical, which is well inside the precision of the formula's underlying assumptions (infinite ground planes, zero metal thickness, lossless dielectric). The line return loss, computed as `(Z_sim − 50) / (Z_sim + 50)` for a 50 Ω VNA reference, sits at −45.8 dB across the qubit band — about 26 dB below the standard −20 dB target for a clean CPW feedline. The raw openEMS port |S₁₁| of −9.63 dB is a port-reference artifact: each lumped port has R = 100 Ω, so even a perfectly matched 50 Ω line reflects −9.5 dB at the individual port. The line-referenced number is the physically meaningful return loss.
+The FDTD result sits within 0.1% of the Wen analytical, which is well inside the precision of the formula's underlying assumptions. The line return loss, computed as `(Z_sim − 50) / (Z_sim + 50)` for a 50 Ω VNA reference, sits at −45.8 dB across the qubit band about 26 dB below the standard −20 dB target for a clean CPW feedline. The raw openEMS port |S₁₁| of −9.63 dB is a port-reference artifact: each lumped port has R = 100 Ω, so even a perfectly matched 50 Ω line reflects −9.5 dB at the individual port.
 
 ---
 
