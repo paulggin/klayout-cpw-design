@@ -1,36 +1,3 @@
-"""
-CPW EM verification — OpenEMS FDTD simulation.
-
-Project 3 (KLayout CPW Design): verifies the 50.43 Ω analytical result
-from the Wen (1969) elliptic-integral formula by running a 3D FDTD
-simulation of a 1 mm straight CPW segment on silicon (s = 10 µm,
-w = 6 µm, ε_r = 11.7). Extracts S-parameters and port impedance
-across 1–10 GHz.
-
-Output
-------
-outputs/em_results/cpw_em_simulation.png  — Z₀ and S-parameters vs freq
-outputs/em_results/cpw_em_results.npz     — raw S-parameter arrays
-outputs/em_results/fdtd_run/              — OpenEMS working directory
-
-Dependencies
-------------
-OpenEMS + CSXCAD Python bindings. Install instructions:
-    https://docs.openems.de/install.html
-Quick path on Linux/WSL/macOS:
-    pip install --user openems CSXCAD numpy scipy matplotlib h5py
-
-Notes on the port model
------------------------
-A single lumped port is placed across the upper CPW gap at each end of
-the segment (between the center conductor edge and the inner edge of the
-upper ground plane). This excites a slightly asymmetric mode at the
-source plane but settles into the symmetric CPW mode within a few
-hundred microns of propagation, which is well inside the 1 mm segment.
-For tighter Z₀ extraction across very broad bands, swap to a two-line
-TRL de-embedding scheme (not needed at the precision used here).
-"""
-
 import os
 import shutil
 import sys
@@ -50,7 +17,6 @@ except ImportError as exc:
     sys.exit(1)
 
 
-# ──────────────────────────────────────────────────────────────────────────────
 # Locked design parameters (from the impedance sweep)
 # ──────────────────────────────────────────────────────────────────────────────
 SUBSTRATE_EPS_R = 11.7      # silicon
@@ -87,10 +53,6 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 OUT_DIR = os.path.abspath(os.path.join(HERE, "..", "outputs", "em_results"))
 os.makedirs(OUT_DIR, exist_ok=True)
 
-# FDTD working directory lives outside OneDrive — the sync agent locks
-# folders during rmtree, which breaks re-runs. openEMS.Run() must create
-# this directory itself, so hand it a path inside %TEMP% that does not
-# yet exist on disk.
 SIM_PARENT = tempfile.mkdtemp(prefix="openems_cpw_")
 SIM_DIR = os.path.join(SIM_PARENT, "fdtd_run")
 print(f"FDTD scratch directory: {SIM_DIR}")
@@ -102,8 +64,6 @@ print(f"FDTD scratch directory: {SIM_DIR}")
 FDTD = openEMS(NrTS=NR_TIMESTEPS, EndCriteria=END_CRITERIA)
 FDTD.SetGaussExcite(F_CENTER, F_HALF)
 
-# PML on all six faces. CPW radiates into both substrate and air, so no
-# perfect-conductor ground beneath the substrate.
 FDTD.SetBoundaryCond(["PML_8"] * 6)
 
 CSX = ContinuousStructure()
@@ -156,14 +116,6 @@ metal.AddBox(
 # ──────────────────────────────────────────────────────────────────────────────
 # Lumped ports — one per end, across the upper gap
 # ──────────────────────────────────────────────────────────────────────────────
-# Dual-gap symmetric CPW excitation. Two lumped ports per chip end, one
-# across each gap, both driven in phase. R = 100 Ω per port — the parallel
-# combination at each end is 50 Ω, which matches the line.
-#
-# Single-gap excitation produces an asymmetric mode that under-reads Z₀ by
-# ~30% (Z_sim ≈ 31 Ω vs Wen 50.43 Ω). Dual-gap drives the true symmetric
-# mode where the center conductor sits at +V relative to both ground planes.
-
 PORT_R = 100.0   # per-port resistance; two in parallel = 50 Ω matched
 
 # Source end (x_min) — both ports excited
@@ -200,10 +152,6 @@ port2l = FDTD.AddLumpedPort(
 # ──────────────────────────────────────────────────────────────────────────────
 mesh = CSX.GetGrid()
 
-# x: anchor at PML edges, port locations, and segment midpoint. SmoothMeshLines
-# fills the rest. Anchors at x_min and x_max are MANDATORY — without them,
-# openEMS cannot attach the lumped-port excitation to a mesh edge and silently
-# runs with no source (the "Unused primitive" warning on port_excite_1).
 x_anchors = sorted({
     x_min - 100.0,
     x_min,
@@ -229,9 +177,6 @@ y_anchors = sorted({
 mesh.AddLine("y", y_anchors)
 mesh.SmoothMeshLines("y", 2.5, 1.5)   # max 2.5 µm step, 1.5× growth ratio
 
-# z: anchor only at geometry transitions; SmoothMeshLines fills the rest.
-# Critical: no extra lines inside the metal — they would shrink the FDTD
-# timestep without adding accuracy (PEC interior has zero field).
 z_anchors = sorted({
     -SUBSTRATE_T,
     -50.0,
@@ -268,20 +213,9 @@ port1l.CalcPort(SIM_DIR, freq)
 port2u.CalcPort(SIM_DIR, freq)
 port2l.CalcPort(SIM_DIR, freq)
 
-# Symmetric dual-gap port reading. By symmetry the upper-gap and lower-gap
-# ports see identical V and I, so the single-port reflection coefficient
-# s11 from port1u (referenced to its own 100 Ω) numerically equals the
-# combined-port s11 (referenced to the effective parallel 50 Ω).
-# The combined port is what physically loads the CPW line, so the Z
-# extraction uses the 50 Ω reference.
 s11 = port1u.uf_ref / port1u.uf_inc
 s21 = port2u.uf_ref / port1u.uf_inc
 
-# Z extraction reference impedance MUST be PORT_R, not the combined-port
-# effective impedance. openEMS reports each port's s11 relative to that
-# port's own resistor R, regardless of how the ports are wired in parallel
-# externally. Using 50 here (the combined-port view) gives Z = Z_line / 2
-# — a factor-of-2 error that mimics the symptom of a port-coupling issue.
 Z_sim = PORT_R * (1.0 + s11) / (1.0 - s11)
 Z_sim_real = np.real(Z_sim)
 
@@ -345,9 +279,6 @@ print(f"Raw data saved: {npz_path}")
 band_mask = (freq >= 4e9) & (freq <= 8e9)
 Z_band_mean = float(np.mean(Z_sim_real[band_mask]))
 
-# openEMS's s11 is referenced to each port's own R (100 Ω), so |s11| ~ 1/3
-# even when the CPW line itself is well matched to 50 Ω. The physically
-# meaningful return loss is the s11 a 50 Ω VNA would measure on the line:
 s11_line = (Z_sim - 50.0) / (Z_sim + 50.0)
 s11_line_band_max_db = float(np.max(20.0 * np.log10(np.abs(s11_line[band_mask]))))
 s11_port_band_max_db = float(np.max(20.0 * np.log10(np.abs(s11[band_mask]))))
