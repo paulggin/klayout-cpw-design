@@ -107,6 +107,10 @@ The final GDS file (`layouts/cpw_full_layout.gds`) places the four elements on a
 
 ---
 
+## Debugging Notes
+
+Port excitation took three iterations to converge on the correct CPW mode. A single-gap port excited the asymmetric mode (center conductor against one ground plane only), giving Z = 31 Ω. Switching to a dual-gap port with both gaps driven in phase excited the wrong mode again — a differential ground-to-ground mode — giving Z = 6.85 Ω. Flipping the sign on the lower-port source to drive the correct symmetric CPW mode gave Z = 25.20 Ω, still off by roughly a factor of two from the analytic 50 Ω target. That discrepancy traced to a post-processing bug: S11 was referenced to 50 Ω instead of each port's actual R = 100 Ω. Correcting the reference impedance in post-processing (`recompute_z_from_npz.py`) brought the result to Z = 50.39 Ω, a 0.07% match to the Wen-formula prediction.
+
 ## Results
 
 ### CPW impedance design space
@@ -199,8 +203,4 @@ python experiments/cpw_em_openems.py
 
 ## Development Notes
 
-Built with AI assistance (Claude) for boilerplate, syntax lookup, and debugging. Architecture, algorithm choices, and physics/math implementation are my own. All code reviewed and understood line-by-line — happy to walk through any part of it.
-
-## Debugging Notes
-
-Port excitation took three iterations to converge on the correct CPW mode. A single-gap port excited the asymmetric mode (center conductor against one ground plane only), giving Z = 31 Ω. Switching to a dual-gap port with both gaps driven in phase excited the wrong mode again — a differential ground-to-ground mode — giving Z = 6.85 Ω. Flipping the sign on the lower-port source to drive the correct symmetric CPW mode gave Z = 25.20 Ω, still off by roughly a factor of two from the analytic 50 Ω target. That discrepancy traced to a post-processing bug: S11 was referenced to 50 Ω instead of each port's actual R = 100 Ω. Correcting the reference impedance in post-processing (`recompute_z_from_npz.py`) brought the result to Z = 50.39 Ω, a 0.07% match to the Wen-formula prediction.
+Built with AI assistance (Claude) for boilerplate, syntax lookup, and debugging. Architecture, algorithm choices, and physics/math implementation are my own. 
